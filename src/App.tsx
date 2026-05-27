@@ -627,14 +627,14 @@ export default function App() {
     }
   };
 
-  // Start trip kilometer tracking for a target goal
-  const handleStartTripTracking = (goalId: string) => {
+  // Start trip kilometer tracking for a target goal or free ride
+  const handleStartTripTracking = (goalId: string | null) => {
     if (!activeMotorcycle) return;
     setActiveTripTracking({
       isActive: true,
       targetGoalId: goalId,
       accumulatedKm: 0,
-      timerIntervalMs: 1000, // 10km every 1 second
+      timerIntervalMs: 1000, // 25km every 1 second
       startBikeOdo: activeMotorcycle.currentOdometer,
     });
     playTestSound();
@@ -652,7 +652,7 @@ export default function App() {
         const targetGoal = mileageGoals.find(g => g.id === prev.targetGoalId);
         const desc = targetGoal 
           ? `Viagem p/ Meta: ${targetGoal.description} (+${prev.accumulatedKm} km)`
-          : `Contagem de Viagem Ativa: +${prev.accumulatedKm} km`;
+          : `Pilotagem Ativa GERAL (+${prev.accumulatedKm} km)`;
 
         handleAddRide({
           motorcycleId: activeId,
@@ -679,17 +679,19 @@ export default function App() {
     if (activeTripTracking.timerIntervalMs === 0) return;
 
     const tickInterval = setInterval(() => {
-      // Find associated goal
-      const targetGoal = mileageGoals.find(g => g.id === activeTripTracking.targetGoalId);
-      if (!targetGoal) {
-        handleStopTripTracking(false);
-        return;
-      }
+      // If we are tracking a specific goal:
+      if (activeTripTracking.targetGoalId) {
+        const targetGoal = mileageGoals.find(g => g.id === activeTripTracking.targetGoalId);
+        if (!targetGoal) {
+          handleStopTripTracking(false);
+          return;
+        }
 
-      // Check if motorcycle odometer is already at or above goal
-      if (activeMotorcycle.currentOdometer >= targetGoal.targetKm) {
-        handleStopTripTracking(true);
-        return;
+        // Check if motorcycle odometer is already at or above goal
+        if (activeMotorcycle.currentOdometer >= targetGoal.targetKm) {
+          handleStopTripTracking(true);
+          return;
+        }
       }
 
       // Increment value
@@ -715,7 +717,7 @@ export default function App() {
     }, activeTripTracking.timerIntervalMs);
 
     return () => clearInterval(tickInterval);
-  }, [activeTripTracking.isActive, activeTripTracking.timerIntervalMs, activeTripTracking.targetGoalId, activeId, activeMotorcycle?.currentOdometer]);
+  }, [activeTripTracking.isActive, activeTripTracking.timerIntervalMs, activeTripTracking.targetGoalId, activeId, activeMotorcycle?.currentOdometer, mileageGoals]);
 
   // Compute overall KPIs for Active Motor
   const activeRides = rides.filter(r => r.motorcycleId === activeId);
@@ -1078,6 +1080,141 @@ export default function App() {
                 {/* ALERTA DE MANUTENÇÃO / NOTIFICAÇÕES LATERAIS */}
                 <div className="lg:col-span-5 flex flex-col gap-5 justify-between">
                   
+                  {/* CENTRAL PILOT COCKPIT / EM MOVIMENTO TRACKER */}
+                  <div className="bg-[#111113] border border-white/5 rounded-3xl p-5 shadow-xl relative overflow-hidden flex flex-col justify-between" id="active-riding-cockpit">
+                    {/* Ambient visual background glow if active */}
+                    {activeTripTracking.isActive ? (
+                      <div className="absolute top-0 right-0 w-36 h-36 bg-[#4CAF50]/10 rounded-full blur-3xl pointer-events-none animate-pulse" />
+                    ) : (
+                      <div className="absolute top-0 right-0 w-36 h-36 bg-[#FFB300]/5 rounded-full blur-3xl pointer-events-none" />
+                    )}
+
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-[10px] font-bold tracking-[0.3em] text-white/40 uppercase font-sans">Módulo de Pilotagem</span>
+                        {activeTripTracking.isActive ? (
+                          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#4CAF50]/10 border border-[#4CAF50]/20 text-[9px] font-black text-[#4CAF50] uppercase tracking-wider animate-pulse">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#4CAF50] animate-ping" />
+                            MOTO EM MOVIMENTO 🏍️💨
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] font-bold text-white/40 uppercase tracking-widest">
+                            MOTO PARADA ⏸️
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Display live trip stats */}
+                      <div className="bg-black/40 border border-white/5 rounded-2xl p-4 flex items-center justify-between my-3 relative">
+                        <div>
+                          <span className="text-[8px] font-bold text-white/30 uppercase tracking-widest block font-mono">QUILÔMETROS PERCORRIDOS</span>
+                          <span className="text-3xl font-black text-white font-mono tracking-tight drop-shadow-md">
+                            {activeTripTracking.accumulatedKm.toLocaleString('pt-BR')} <span className="text-xs text-[#FFB300] font-bold uppercase ml-0.5">KM</span>
+                          </span>
+                        </div>
+                        
+                        {/* Live Speed gauge simulation */}
+                        <div className="text-right">
+                          <span className="text-[8px] font-bold text-white/30 uppercase tracking-widest block font-mono">VELOCIDADE ESTIMADA</span>
+                          <span className={`text-xl font-black font-mono tracking-tight ${activeTripTracking.isActive ? 'text-[#4CAF50]' : 'text-white/40'}`}>
+                            {activeTripTracking.isActive ? Math.floor(95 + Math.random() * 15) : '0'} <span className="text-[10px] text-white/30 uppercase">km/h</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Instructions */}
+                      <p className="text-[10px] text-white/40 leading-relaxed font-sans mb-4">
+                        {activeTripTracking.isActive 
+                          ? "Sua moto está simulando um percurso ativo na estrada! Conforme os quilômetros sobem, o odômetro principal aumenta em tempo real."
+                          : "Inicie o modo de pilotagem para contar a distância percorrida ao vivo. Excelente para testar o acionamento de suas metas de odômetro!"}
+                      </p>
+                    </div>
+
+                    {/* Controller actions */}
+                    <div className="flex flex-col gap-2">
+                      {activeTripTracking.isActive ? (
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMotorcycles(prev => prev.map(m => {
+                                  if (m.id === activeId) {
+                                    return { ...m, currentOdometer: m.currentOdometer + 100 };
+                                  }
+                                  return m;
+                                }));
+                                setActiveTripTracking(prev => ({
+                                  ...prev,
+                                  accumulatedKm: prev.accumulatedKm + 100,
+                                }));
+                                playTestSound();
+                              }}
+                              className="py-2 bg-[#FFB300]/10 hover:bg-[#FFB300]/15 border border-[#FFB300]/20 text-[#FFB300] font-black text-[9px] tracking-widest uppercase rounded-xl transition-all font-mono flex items-center justify-center gap-1 cursor-pointer"
+                            >
+                              +100 km Rápido
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMotorcycles(prev => prev.map(m => {
+                                  if (m.id === activeId) {
+                                    return { ...m, currentOdometer: m.currentOdometer + 500 };
+                                  }
+                                  return m;
+                                }));
+                                setActiveTripTracking(prev => ({
+                                  ...prev,
+                                  accumulatedKm: prev.accumulatedKm + 500,
+                                }));
+                                playTestSound();
+                              }}
+                              className="py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-extrabold text-[9px] tracking-widest uppercase rounded-xl transition-all font-mono flex items-center justify-center gap-1 cursor-pointer"
+                            >
+                              +500 km Viagem
+                            </button>
+                          </div>
+                          
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveTripTracking(prev => ({
+                                  ...prev,
+                                  timerIntervalMs: prev.timerIntervalMs > 0 ? 0 : 1000
+                                }));
+                              }}
+                              className={`flex-1 py-2.5 rounded-xl text-[9px] font-black tracking-wider uppercase border transition-all cursor-pointer font-sans ${
+                                activeTripTracking.timerIntervalMs > 0
+                                  ? 'bg-[#FF9800]/20 text-[#FFB300] border-[#FFB300]/30'
+                                  : 'bg-white/5 text-white/50 border-white/10 hover:bg-white/10'
+                              }`}
+                            >
+                              {activeTripTracking.timerIntervalMs > 0 ? '⏸️ Pausar' : '▶️ Retomar'}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleStopTripTracking(true)}
+                              className="px-4 py-2.5 bg-[#4CAF50] hover:bg-[#45a049] text-black font-black text-[9px] tracking-widest uppercase rounded-xl transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+                            >
+                              Parar & Salvar 🏁
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleStartTripTracking(null)}
+                          className="w-full py-3 bg-[#4CAF50] hover:bg-[#45a049] text-black font-black text-[10px] tracking-widest uppercase rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg hover:shadow-[#4CAF50]/15"
+                        >
+                          <Gauge className="w-4 h-4 animate-pulse" />
+                          INICIAR PILOTAGEM ATIVA 🏍️💨
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Immediate alerts card */}
                   <div className="bg-[#111113] border border-white/5 rounded-3xl p-6 shadow-xl flex-1 flex flex-col justify-between">
                     <div>
