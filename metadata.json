@@ -1,0 +1,8 @@
+{
+  "name": "Controle de Km de Moto",
+  "description": "Aplicativo para gerenciar quilometragem, consumo de combustível, manutenção preventiva e diagnósticos com Inteligência Artificial para motocicletas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
