@@ -27,18 +27,19 @@ export function playMilestoneSound() {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
-      osc.type = 'sine';
+      // Using triangle wave for a richer, louder and warmer sound that cuts through background noise
+      osc.type = 'triangle';
       osc.frequency.setValueAtTime(freq, t);
 
-      // Simple lowpass filter for warmth
+      // Simple lowpass filter for warmth and preventing harshness
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(2000, t);
+      filter.frequency.setValueAtTime(2500, t);
 
-      // Envelope settings for smooth transition
+      // Multiplied the gain value from 0.15 to 0.65 for high-volume playback
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.15, t + 0.01); // ultra-fast attack
-      gain.gain.setValueAtTime(0.15, t + durations[idx] - 0.05); // hold
+      gain.gain.linearRampToValueAtTime(0.65, t + 0.01); // ultra-fast attack with higher volume
+      gain.gain.setValueAtTime(0.65, t + durations[idx] - 0.05); // hold
       gain.gain.exponentialRampToValueAtTime(0.001, t + durations[idx]); // custom decay
 
       osc.connect(filter);
@@ -78,14 +79,22 @@ export function playTestSound() {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       
-      osc.type = 'sine';
+      // Using triangle wave for improved audibility and loud projection
+      osc.type = 'triangle';
       osc.frequency.setValueAtTime(freq, t);
       
+      // Simple lowpass filter to smooth out high harmonics
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(2500, t);
+
+      // Multiplied the gain value from 0.1 to 0.6 for higher volume
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.1, t + 0.01);
+      gain.gain.linearRampToValueAtTime(0.6, t + 0.01);
       gain.gain.exponentialRampToValueAtTime(0.001, t + durations[idx]);
       
-      osc.connect(gain);
+      osc.connect(filter);
+      filter.connect(gain);
       gain.connect(ctx.destination);
       
       osc.start(t);
